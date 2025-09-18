@@ -1,0 +1,57 @@
+# HealthGo Docker Compose Configuration
+version: '3.8'
+
+services:
+  healthgo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # Supabase Configuration
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - NODE_ENV=production
+    volumes:
+      # Volume for development hot-reload (optional)
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - healthgo-network
+
+  # Development service with hot-reload
+  healthgo-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+    restart: unless-stopped
+    networks:
+      - healthgo-network
+
+networks:
+  healthgo-network:
+    driver: bridge
+
+# Docker Compose commands:
+# Development: docker-compose up healthgo-dev
+# Production: docker-compose up healthgo
+# Build and up: docker-compose up --build

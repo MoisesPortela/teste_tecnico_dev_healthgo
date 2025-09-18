@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      patient_readings: {
+        Row: {
+          created_at: string | null
+          hr: number
+          id: string
+          paciente_cpf: string
+          paciente_id: string
+          paciente_nome: string
+          pressao_dia: number
+          pressao_sys: number
+          resp_freq: number
+          spo2: number
+          status: string
+          temp: number
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string | null
+          hr: number
+          id?: string
+          paciente_cpf: string
+          paciente_id: string
+          paciente_nome: string
+          pressao_dia: number
+          pressao_sys: number
+          resp_freq: number
+          spo2: number
+          status: string
+          temp: number
+          timestamp: string
+        }
+        Update: {
+          created_at?: string | null
+          hr?: number
+          id?: string
+          paciente_cpf?: string
+          paciente_id?: string
+          paciente_nome?: string
+          pressao_dia?: number
+          pressao_sys?: number
+          resp_freq?: number
+          spo2?: number
+          status?: string
+          temp?: number
+          timestamp?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

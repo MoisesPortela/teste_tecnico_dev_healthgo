@@ -1,90 +1,132 @@
-// Supabase client configuration
-// Para conectar ao Supabase, use o botão verde "Supabase" no topo da interface Lovable
+// Supabase service layer for HealthGo patient readings
 
+import { supabase } from '@/integrations/supabase/client';
 import { PatientReading } from '@/types/patient';
 
-export interface SupabaseConfig {
-  url: string;
-  key: string;
-}
-
-// Simulação da conexão Supabase (será substituída pela integração nativa do Lovable)
-export const supabaseConfig: SupabaseConfig = {
-  url: import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co',
-  key: import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
-};
-
-// Mock functions que serão substituídas pela integração real
 export const patientService = {
-  // Mock - Upload CSV data
+  // Upload CSV data to Supabase
   async uploadReadings(readings: any[]) {
-    console.warn('⚠️ CONECTE O SUPABASE: Use o botão verde no topo para ativar a integração');
-    // Simula processamento
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return {
-      success: true,
-      inserted_count: readings.length,
-      error_count: 0,
-      processing_time: 1.2,
-      message: 'Mock upload - conecte o Supabase para funcionamento real'
-    };
+    const startTime = Date.now();
+    
+    try {
+      // Inserir os dados na tabela patient_readings
+      const { data, error } = await supabase
+        .from('patient_readings')
+        .insert(readings)
+        .select();
+
+      if (error) {
+        console.error('Erro ao inserir dados:', error);
+        return {
+          success: false,
+          inserted_count: 0,
+          error_count: readings.length,
+          processing_time: (Date.now() - startTime) / 1000,
+          message: `Erro ao inserir dados: ${error.message}`
+        };
+      }
+
+      const processingTime = (Date.now() - startTime) / 1000;
+      
+      return {
+        success: true,
+        inserted_count: data?.length || readings.length,
+        error_count: 0,
+        processing_time: processingTime,
+        message: `${data?.length || readings.length} registros inseridos com sucesso`
+      };
+
+    } catch (error: any) {
+      console.error('Erro no upload:', error);
+      return {
+        success: false,
+        inserted_count: 0,
+        error_count: readings.length,
+        processing_time: (Date.now() - startTime) / 1000,
+        message: `Erro no upload: ${error.message}`
+      };
+    }
   },
 
-  // Mock - Get all patients
+  // Get all patients with summary info
   async getPatients() {
-    console.warn('⚠️ CONECTE O SUPABASE: Use o botão verde no topo para ativar a integração');
-    return [
-      {
-        paciente_id: 'PAC001',
-        paciente_nome: 'João Silva',
-        last_reading: '2024-01-15 14:30:00',
-        total_readings: 25
-      },
-      {
-        paciente_id: 'PAC002',
-        paciente_nome: 'Maria Santos',
-        last_reading: '2024-01-15 15:45:00',
-        total_readings: 18
+    try {
+      const { data, error } = await supabase
+        .from('patient_readings')
+        .select('paciente_id, paciente_nome, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar pacientes:', error);
+        return [];
       }
-    ];
+
+      // Agrupar por paciente e obter informações resumidas
+      const patientMap = new Map();
+      
+      data?.forEach(reading => {
+        const patientId = reading.paciente_id;
+        if (!patientMap.has(patientId)) {
+          patientMap.set(patientId, {
+            paciente_id: patientId,
+            paciente_nome: reading.paciente_nome,
+            last_reading: reading.created_at,
+            total_readings: 1
+          });
+        } else {
+          const patient = patientMap.get(patientId);
+          patient.total_readings += 1;
+          // Manter a data mais recente
+          if (new Date(reading.created_at) > new Date(patient.last_reading)) {
+            patient.last_reading = reading.created_at;
+          }
+        }
+      });
+
+      return Array.from(patientMap.values());
+
+    } catch (error: any) {
+      console.error('Erro ao buscar pacientes:', error);
+      return [];
+    }
   },
 
-  // Mock - Get patient readings
+  // Get patient readings with optional filters
   async getPatientReadings(patientId: string, filters: any = {}) {
-    console.warn('⚠️ CONECTE O SUPABASE: Use o botão verde no topo para ativar a integração');
-    // Simula dados de exemplo
-    return [
-      {
-        id: '1',
-        paciente_id: patientId || 'PAC001',
-        paciente_nome: 'João Silva',
-        paciente_cpf: '123.456.789-00',
-        hr: 75,
-        spo2: 98,
-        pressao_sys: 120,
-        pressao_dia: 80,
-        temp: 36.5,
-        resp_freq: 16,
-        status: 'NORMAL' as const,
-        timestamp: '12:00:00.00',
-        created_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-        paciente_id: patientId || 'PAC001',
-        paciente_nome: 'João Silva',
-        paciente_cpf: '123.456.789-00',
-        hr: 85,
-        spo2: 96,
-        pressao_sys: 140,
-        pressao_dia: 90,
-        temp: 37.2,
-        resp_freq: 20,
-        status: 'ALERTA' as const,
-        timestamp: '12:05:00.00',
-        created_at: new Date().toISOString()
+    try {
+      let query = supabase
+        .from('patient_readings')
+        .select('*');
+
+      // Filtrar por paciente se especificado
+      if (patientId && patientId.trim()) {
+        query = query.eq('paciente_id', patientId);
       }
-    ] as PatientReading[];
+
+      // Filtros de data
+      if (filters.from) {
+        query = query.gte('created_at', filters.from);
+      }
+      if (filters.to) {
+        query = query.lte('created_at', filters.to);
+      }
+
+      // Ordenar por timestamp
+      query = query.order('timestamp', { ascending: true });
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Erro ao buscar leituras:', error);
+        return [];
+      }
+
+      return data as PatientReading[];
+
+    } catch (error: any) {
+      console.error('Erro ao buscar leituras do paciente:', error);
+      return [];
+    }
   }
 };
 

@@ -17,7 +17,7 @@ const Index = () => {
   const [readings, setReadings] = useState<PatientReading[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filters, setFilters] = useState<FilterState>({
-    patientId: '',
+    patientId: 'all',
     dateFrom: '',
     dateTo: ''
   });
@@ -143,12 +143,13 @@ const Index = () => {
     
     try {
       const searchPatientId = patientId || filters.patientId;
+      const finalPatientId = searchPatientId === 'all' ? '' : searchPatientId;
       const searchFilters = {
         from: filters.dateFrom,
         to: filters.dateTo
       };
       
-      const data = await patientService.getPatientReadings(searchPatientId, searchFilters);
+      const data = await patientService.getPatientReadings(finalPatientId, searchFilters);
       setReadings(data);
       
       if (data.length === 0) {
@@ -184,7 +185,7 @@ const Index = () => {
     const url = URL.createObjectURL(blob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `healthgo-${filters.patientId || 'all'}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `healthgo-${filters.patientId === 'all' ? 'all' : filters.patientId || 'all'}-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);
@@ -199,7 +200,7 @@ const Index = () => {
 
   const handleClearFilters = useCallback(() => {
     setFilters({
-      patientId: '',
+      patientId: 'all',
       dateFrom: '',
       dateTo: ''
     });

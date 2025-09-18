@@ -45,7 +45,7 @@ export function PatientFilters({
                 <SelectValue placeholder="Selecionar paciente" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os pacientes</SelectItem>
+                <SelectItem value="all">Todos os pacientes</SelectItem>
                 {patients.map((patient) => (
                   <SelectItem key={patient.paciente_id} value={patient.paciente_id}>
                     {patient.paciente_id} - {patient.paciente_nome}
@@ -91,7 +91,7 @@ export function PatientFilters({
         </div>
 
         {/* Current Filter Info */}
-        {filters.patientId && (
+        {filters.patientId && filters.patientId !== 'all' && (
           <div className="text-sm text-muted-foreground">
             Filtro ativo: {patients.find(p => p.paciente_id === filters.patientId)?.paciente_nome || filters.patientId}
             {(filters.dateFrom || filters.dateTo) && (

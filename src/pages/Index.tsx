@@ -9,8 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { parseCSV, generateCSV } from '@/lib/csv-parser';
-import { patientService, isSupabaseConnected } from '@/lib/supabase';
-import { Activity, Upload, AlertTriangle, Database, Heart } from 'lucide-react';
+import { patientService } from '@/lib/supabase';
+import { Activity, Upload, Heart } from 'lucide-react';
 
 const Index = () => {
   const [readings, setReadings] = useState<PatientReading[]>([]);
